@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Na MarsOJ
 // @namespace    http://tampermonkey.net/
-// @version      2.9.51
+// @version      2.9.52
 // @author       sandi_123
 // @match        *://marsoj.cn/*
 // @description  这是一个非常强大的MarsOJ优化脚本。
@@ -47,7 +47,7 @@
     }
 
     /* ========== 版本与更新 ========== */
-    const CUR_VER = '2.9.51';
+    const CUR_VER = '2.9.52';
     const UPDATE_SOURCES = [
         'https://fastly.jsdelivr.net/gh/sandi-321/na-marsoj@main/dist/na-marsoj.user.js',
         'https://cdn.jsdelivr.net/gh/sandi-321/na-marsoj@main/dist/na-marsoj.user.js',
@@ -61,29 +61,40 @@
         }
         return 0;
     };
-    function fetchRemoteVersion() {
+
+    // 单个源探测，返回 {url, version} 或 null
+    function fetchVersionFromSource(url) {
         return new Promise((resolve) => {
-            let i = 0;
-            const tryNext = () => {
-                if (i >= UPDATE_SOURCES.length) return resolve(null);
-                const url = UPDATE_SOURCES[i++];
-                GM_xmlhttpRequest({
-                    method: 'GET',
-                    url: addCacheBuster(url),
-                    headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
-                    anonymous: true,
-                    timeout: 8000,
-                    onload: res => {
-                        if (res.status === 200 && /==UserScript==/.test(res.responseText || '')) {
-                            const m = res.responseText.match(/\/\/\s*@version\s+([0-9.]+)/);
-                            resolve({ url, version: m ? m[1] : null });
-                        } else tryNext();
-                    },
-                    onerror: tryNext,
-                    ontimeout: tryNext
-                });
-            };
-            tryNext();
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url: addCacheBuster(url),
+                headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+                anonymous: true,
+                timeout: 8000,
+                onload: res => {
+                    if (res.status === 200 && /==UserScript==/.test(res.responseText || '')) {
+                        const m = res.responseText.match(/\/\/\s*@version\s+([0-9.]+)/);
+                        resolve(m ? { url, version: m[1] } : null);
+                    } else {
+                        resolve(null);
+                    }
+                },
+                onerror: () => resolve(null),
+                ontimeout: () => resolve(null)
+            });
+        });
+    }
+
+    // 并行检查所有源，取版本最新的
+    function fetchRemoteVersion() {
+        return Promise.all(UPDATE_SOURCES.map(url => fetchVersionFromSource(url))).then(results => {
+            let best = null;
+            results.forEach(r => {
+                if (r && r.version) {
+                    if (!best || cmpVer(r.version, best.version) > 0) best = r;
+                }
+            });
+            return best; // null 表示全部失败
         });
     }
 
@@ -285,6 +296,7 @@
             style.textContent = css;
         } else { if (style) style.remove(); }
     }
+    // toast 返回 end 函数，可手动关闭
     function toast(msg, ms = getT()) {
         const tc = document.getElementById('na-tc') || document.body.appendChild(el('div', { id: 'na-tc' }));
         const b = el('button', { className: 'na-cl', textContent: '×' });
@@ -293,6 +305,7 @@
         let tm, cl = false, end = () => { if (!cl) { cl = true; clearTimeout(tm); t.classList.remove('show'); setTimeout(() => t.remove(), 250); } };
         const run = () => { if (ms > 0 && !cl) { clearTimeout(tm); tm = setTimeout(end, ms); } };
         b.onclick = end; t.onmouseenter = () => clearTimeout(tm); t.onmouseleave = run; run();
+        return end;
     }
     let latestHwApplied = false;
     function applyLatestHomework() {
@@ -409,8 +422,9 @@
         const btnCheck = el('button', { className: 'na-wb', textContent: '检查更新' });
         btnCheck.onclick = () => {
             btnCheck.disabled = true;
-            toast('正在探测可用线路…', 0);
+            const closeProbe = toast('正在探测可用线路…', 0); // 不自动关闭，拿到结果后手动关
             fetchRemoteVersion().then(r => {
+                closeProbe();
                 btnCheck.disabled = false;
                 if (!r) { toast('所有线路均不可达，请检查网络'); return; }
                 const c = cmpVer(r.version, CUR_VER);
