@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Na MarsOJ
 // @namespace    http://tampermonkey.net/
-// @version      2.9.50
+// @version      2.9.51
 // @author       sandi_123
 // @match        *://marsoj.cn/*
 // @description  这是一个非常强大的MarsOJ优化脚本。
@@ -46,8 +46,8 @@
         };
     }
 
-    /* ========== 版本与更新（新增） ========== */
-    const CUR_VER = '2.9.50';
+    /* ========== 版本与更新 ========== */
+    const CUR_VER = '2.9.51';
     const UPDATE_SOURCES = [
         'https://fastly.jsdelivr.net/gh/sandi-321/na-marsoj@main/dist/na-marsoj.user.js',
         'https://cdn.jsdelivr.net/gh/sandi-321/na-marsoj@main/dist/na-marsoj.user.js',
@@ -404,26 +404,26 @@
         const rowData = el('div', { className: 'na-rw' }); rowData.append(el('label', { textContent: '缓存与重置', style: 'color:#999;font-size:12px' }), el('div', { style: 'display:flex;gap:8px' }, btnClear, btnDefault));
         const secData = el('div', { className: 'na-cat-section' }); secData.append(rowData);
 
-        /* ===== 更新分类（新增） ===== */
+        /* ===== 更新分类 ===== */
         const lblCurVer = el('label', { textContent: `当前版本：v${CUR_VER}`, style: { color: '#666', fontSize: '12px' } });
         const btnCheck = el('button', { className: 'na-wb', textContent: '检查更新' });
-        const updTip = el('span', { textContent: '', style: { fontSize: '12px', color: '#888' } });
         btnCheck.onclick = () => {
-            btnCheck.disabled = true; updTip.textContent = '正在探测可用线路…';
+            btnCheck.disabled = true;
+            toast('正在探测可用线路…', 0);
             fetchRemoteVersion().then(r => {
                 btnCheck.disabled = false;
-                if (!r) { updTip.textContent = '所有线路均不可达'; return; }
+                if (!r) { toast('所有线路均不可达，请检查网络'); return; }
                 const c = cmpVer(r.version, CUR_VER);
-                if (c <= 0) { updTip.textContent = `已是最新 v${CUR_VER}`; return; }
-                updTip.textContent = `发现新版 v${r.version}`;
+                if (c <= 0) { toast(`已是最新 v${CUR_VER}`); return; }
+                toast(`发现新版 v${r.version}`);
                 const btnDo = el('button', { className: 'na-wb na-wp', textContent: `更新到 v${r.version}`, onclick: () => GM_openInTab(r.url, { active: true }) });
-                updTip.after(btnDo);
+                btnCheck.after(btnDo);
             });
         };
         const rowUpdate = el('div', { className: 'na-rw' });
         rowUpdate.append(
             el('label', { textContent: '脚本更新', style: { color: '#999', fontSize: '12px' } }),
-            el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' } }, lblCurVer, btnCheck, updTip)
+            el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' } }, lblCurVer, btnCheck)
         );
         const secUpdate = el('div', { className: 'na-cat-section' }); secUpdate.append(rowUpdate);
 
