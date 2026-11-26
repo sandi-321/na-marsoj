@@ -5,7 +5,7 @@
 // @author       sandi_123
 // @match        *://marsoj.cn/*
 // @description  这是一个非常强大的MarsOJ优化脚本。
-// @icon         https://marsoj.cn/favicon-96x96.png?mars-fb0dce8a3a
+// @icon         https://marsoj.cn/favicon-96x96.png?
 // @grant        GM_addStyle
 // @grant        GM_xmlhttpRequest
 // @grant        GM_openInTab
