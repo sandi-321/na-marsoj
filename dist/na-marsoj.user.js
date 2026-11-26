@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Na MarsOJ
 // @namespace    http://tampermonkey.net/
-// @version      2.9.52
+// @version      2.9.53
 // @author       sandi_123
 // @match        *://marsoj.cn/*
 // @description  这是一个非常强大的MarsOJ优化脚本。
