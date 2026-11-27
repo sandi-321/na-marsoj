@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Na MarsOJ
 // @namespace    http://tampermonkey.net/
-// @version      2.9.54
+// @version      2.9.55
 // @author       sandi_123
 // @match        *://marsoj.cn/*
 // @description  这是一个非常强大的MarsOJ优化脚本。
@@ -45,12 +45,17 @@
             }).catch(() => { if (opts.onerror) opts.onerror(); });
         };
     }
-    const CUR_VER = '2.9.54';
+
+    /* ========== 版本与更新 ========== */
+    const CUR_VER = '2.9.55';
     const UPDATE_SOURCES = [
         'https://fastly.jsdelivr.net/gh/sandi-321/na-marsoj@main/dist/na-marsoj.user.js',
         'https://cdn.jsdelivr.net/gh/sandi-321/na-marsoj@main/dist/na-marsoj.user.js',
         'https://raw.githubusercontent.com/sandi-321/na-marsoj/main/dist/na-marsoj.user.js'
     ];
+    const K_UPDATE_INFO = 'na_update_info';
+    const K_AUTO_CHECK = 'na_last_auto_check';
+
     const cmpVer = (a, b) => {
         const pa = String(a).split('.').map(Number), pb = String(b).split('.').map(Number);
         for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
@@ -59,6 +64,15 @@
         }
         return 0;
     };
+
+    function getUpdateInfo() {
+        try { return JSON.parse(localStorage.getItem(K_UPDATE_INFO)); } catch { return null; }
+    }
+    function setUpdateInfo(info) {
+        if (info && info.version) localStorage.setItem(K_UPDATE_INFO, JSON.stringify(info));
+        else localStorage.removeItem(K_UPDATE_INFO);
+    }
+
     function fetchVersionFromSource(url) {
         return new Promise((resolve) => {
             GM_xmlhttpRequest({
@@ -80,6 +94,7 @@
             });
         });
     }
+
     function fetchRemoteVersion() {
         return Promise.all(UPDATE_SOURCES.map(url => fetchVersionFromSource(url))).then(results => {
             let best = null;
@@ -92,6 +107,57 @@
         });
     }
 
+    // 静默自动检查（页面刷新时调用，不弹 toast）
+    function autoCheckUpdate() {
+        const last = parseInt(localStorage.getItem(K_AUTO_CHECK) || '0');
+        if (Date.now() - last < 30 * 60 * 1000) return; // 30分钟内不重复
+        localStorage.setItem(K_AUTO_CHECK, Date.now());
+        fetchRemoteVersion().then(r => {
+            if (r && cmpVer(r.version, CUR_VER) > 0) setUpdateInfo({ version: r.version, url: r.url });
+            else setUpdateInfo(null);
+            // 如果设置面板正开着，刷新更新区域
+            const container = document.querySelector('.na-update-container');
+            if (container) renderUpdateSection(container);
+        });
+    }
+
+    // 渲染更新分类区域（统一管理，避免多按钮）
+    function renderUpdateSection(container) {
+        container.innerHTML = '';
+        const info = getUpdateInfo();
+        const lblCurVer = el('label', { textContent: `当前版本：v${CUR_VER}`, style: { color: '#666', fontSize: '12px' } });
+        const btnCheck = el('button', { className: 'na-wb', textContent: '检查更新' });
+        btnCheck.onclick = () => {
+            btnCheck.disabled = true;
+            const closeProbe = toast('正在探测可用线路…', 0);
+            fetchRemoteVersion().then(r => {
+                closeProbe();
+                btnCheck.disabled = false;
+                if (!r) { toast('所有线路均不可达，请检查网络'); return; }
+                const c = cmpVer(r.version, CUR_VER);
+                if (c <= 0) {
+                    toast(`已是最新 v${CUR_VER}`);
+                    setUpdateInfo(null);
+                } else {
+                    toast(`发现新版 v${r.version}`);
+                    setUpdateInfo({ version: r.version, url: r.url });
+                }
+                renderUpdateSection(container);
+            });
+        };
+        const wrapper = el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' } }, lblCurVer, btnCheck);
+        if (info && info.version) {
+            const btnDo = el('button', {
+                className: 'na-wb na-wp',
+                textContent: `更新到 v${info.version}`,
+                onclick: () => GM_openInTab(info.url, { active: true })
+            });
+            wrapper.append(btnDo);
+        }
+        container.append(wrapper);
+    }
+
+    /* ========== 其余业务逻辑（未改动） ========== */
     const KT = 'na_t', KH = 'na_h', KR = 'na_rc', KREDIRECT = 'na_redirect_enable';
     const KP_EN = 'na_partial_enable', KF_EN = 'na_fail_enable', KLHE = 'na_latest_hw_enable', KHC = 'na_my_class_cid';
     const U1 = 'https://marsoj.cn/homework', U2 = U1 + '?tab=classes';
@@ -290,7 +356,6 @@
             style.textContent = css;
         } else { if (style) style.remove(); }
     }
-    // toast 返回 end 函数，可手动关闭
     function toast(msg, ms = getT()) {
         const tc = document.getElementById('na-tc') || document.body.appendChild(el('div', { id: 'na-tc' }));
         const b = el('button', { className: 'na-cl', textContent: '×' });
@@ -411,29 +476,15 @@
         const rowData = el('div', { className: 'na-rw' }); rowData.append(el('label', { textContent: '缓存与重置', style: 'color:#999;font-size:12px' }), el('div', { style: 'display:flex;gap:8px' }, btnClear, btnDefault));
         const secData = el('div', { className: 'na-cat-section' }); secData.append(rowData);
 
-        /* ===== 更新分类 ===== */
-        const lblCurVer = el('label', { textContent: `当前版本：v${CUR_VER}`, style: { color: '#666', fontSize: '12px' } });
-        const btnCheck = el('button', { className: 'na-wb', textContent: '检查更新' });
-        btnCheck.onclick = () => {
-            btnCheck.disabled = true;
-            const closeProbe = toast('正在探测可用线路…', 0); // 不自动关闭，拿到结果后手动关
-            fetchRemoteVersion().then(r => {
-                closeProbe();
-                btnCheck.disabled = false;
-                if (!r) { toast('所有线路均不可达，请检查网络'); return; }
-                const c = cmpVer(r.version, CUR_VER);
-                if (c <= 0) { toast(`已是最新 v${CUR_VER}`); return; }
-                toast(`发现新版 v${r.version}`);
-                const btnDo = el('button', { className: 'na-wb na-wp', textContent: `更新到 v${r.version}`, onclick: () => GM_openInTab(r.url, { active: true }) });
-                btnCheck.after(btnDo);
-            });
-        };
+        /* ===== 更新分类（使用统一渲染） ===== */
+        const updateContainer = el('div', { className: 'na-update-container' });
         const rowUpdate = el('div', { className: 'na-rw' });
         rowUpdate.append(
             el('label', { textContent: '脚本更新', style: { color: '#999', fontSize: '12px' } }),
-            el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' } }, lblCurVer, btnCheck)
+            updateContainer
         );
         const secUpdate = el('div', { className: 'na-cat-section' }); secUpdate.append(rowUpdate);
+        renderUpdateSection(updateContainer); // 初始渲染
 
         const sectionMap = { basic: secBasic, status: secStatus, data: secData, update: secUpdate };
         const contentArea = el('div', { className: 'na-content' }, secBasic, secStatus, secData, secUpdate);
@@ -499,6 +550,7 @@
     }
     applyColorStyle();
     setTimeout(() => toast('Na MarsOJ加载成功'), 150); init();
+    autoCheckUpdate(); // 静默自动检查更新
     let obsTimer;
     new MutationObserver(() => { clearTimeout(obsTimer); obsTimer = setTimeout(() => { latestHwApplied = false; init(); }, 200); }).observe(document.body, { childList: true, subtree: true });
 })();
