@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         Na MarsOJ
 // @namespace    http://tampermonkey.net/
-// @version      2.9.53
+// @version      2.9.54
 // @author       sandi_123
 // @match        *://marsoj.cn/*
 // @description  这是一个非常强大的MarsOJ优化脚本。
-// @icon         https://marsoj.cn/favicon-96x96.png?
+// @icon         https://marsoj.cn/favicon-96x96.png?mars-fb0dce8a3a
 // @grant        GM_addStyle
 // @grant        GM_xmlhttpRequest
 // @grant        GM_openInTab
@@ -45,9 +45,7 @@
             }).catch(() => { if (opts.onerror) opts.onerror(); });
         };
     }
-
-    /* ========== 版本与更新 ========== */
-    const CUR_VER = '2.9.52';
+    const CUR_VER = '2.9.54';
     const UPDATE_SOURCES = [
         'https://fastly.jsdelivr.net/gh/sandi-321/na-marsoj@main/dist/na-marsoj.user.js',
         'https://cdn.jsdelivr.net/gh/sandi-321/na-marsoj@main/dist/na-marsoj.user.js',
@@ -61,8 +59,6 @@
         }
         return 0;
     };
-
-    // 单个源探测，返回 {url, version} 或 null
     function fetchVersionFromSource(url) {
         return new Promise((resolve) => {
             GM_xmlhttpRequest({
@@ -84,8 +80,6 @@
             });
         });
     }
-
-    // 并行检查所有源，取版本最新的
     function fetchRemoteVersion() {
         return Promise.all(UPDATE_SOURCES.map(url => fetchVersionFromSource(url))).then(results => {
             let best = null;
@@ -94,7 +88,7 @@
                     if (!best || cmpVer(r.version, best.version) > 0) best = r;
                 }
             });
-            return best; // null 表示全部失败
+            return best;
         });
     }
 
