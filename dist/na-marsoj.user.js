@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Na MarsOJ
 // @namespace    http://tampermonkey.net/
-// @version      2.9.56
+// @version      2.9.57
 // @author       sandi_123
 // @match        *://marsoj.cn/*
 // @description  这是一个非常强大的MarsOJ优化脚本。
@@ -47,7 +47,7 @@
     }
 
     /* ========== 版本与更新 ========== */
-    const CUR_VER = '2.9.56';
+    const CUR_VER = '2.9.57';
     const UPDATE_SOURCES = [
         'https://fastly.jsdelivr.net/gh/sandi-321/na-marsoj@main/dist/na-marsoj.user.js',
         'https://cdn.jsdelivr.net/gh/sandi-321/na-marsoj@main/dist/na-marsoj.user.js',
@@ -426,27 +426,27 @@
         }).catch(() => {});
     }
 
-    /* ===== 替换公告为最新消息 ===== */
+    /* ===== 替换公告内容 ===== */
     function replaceBulletin() {
         const bulletinPanel = document.querySelector('section.hp-panel[aria-labelledby="hp-bulletin-title"]');
         if (!bulletinPanel) return;
         if (bulletinPanel.querySelector('[data-na-bulletin="1"]')) return; // 已替换
         const emptyDiv = bulletinPanel.querySelector('.hp-empty.hp-bulletin-empty');
         if (!emptyDiv) return;
+
         const newDiv = document.createElement('div');
         newDiv.className = 'hp-bulletin-content';
         newDiv.setAttribute('data-na-bulletin', '1');
-        newDiv.style.cssText = 'padding:12px 16px;font-size:14px;color:#333;line-height:1.6';
+        newDiv.style.cssText = 'padding:12px 0;font-size:14px;color:#333;line-height:1.8';
         newDiv.innerHTML = `
-            <ul style="margin:0;padding-left:20px;">
-                <li><strong>Na MarsOJ v2.9.56 已发布</strong>：新增替换首页公告为最新消息，优化自动更新检测。</li>
-                <li>在脚本设置 → 更新 中可手动检查更新，或等待自动检测（每30分钟一次）。</li>
-                <li>反馈 / 源码：<a href="https://github.com/sandi-321/na-marsoj" target="_blank" style="color:#1677ff;text-decoration:none">GitHub</a></li>
+            <ul style="margin:0;">
+                <li><strong>Na MarsOJ v${CUR_VER} 已发布 🎉</strong><br>新增首页公告展示、自动检查更新等功能，使用体验全面升级。</li>
+                <li><strong>自动更新检测</strong><br>每次打开页面会静默检测新版本，发现新版时会在「设置 → 更新」中显示更新按钮。</li>
+                <li><strong>手动检查更新</strong><br>进入「设置 → 更新」点击检查按钮，同时探测全部线路并取最新版本。</li>
+                <li><strong>问题反馈 / 查看源码</strong><br>欢迎前往 <a href="https://github.com/sandi-321/na-marsoj" target="_blank" style="color:#1677ff">GitHub 仓库</a> 提交 Issue 或参与改进。</li>
             </ul>
         `;
         emptyDiv.replaceWith(newDiv);
-        const title = bulletinPanel.querySelector('#hp-bulletin-title');
-        if (title) title.textContent = '最新消息';
     }
 
     function settings() {
@@ -574,7 +574,7 @@
             }
         }
         applyLatestHomework();
-        replaceBulletin(); // 替换公告
+        replaceBulletin();
         const dm = document.querySelector('li.nav__list-item[data-dropdown-target="#menu-nav-domain"]');
         if (dm && !document.getElementById('na-st')) dm.replaceWith(el('li', { id: 'na-st', className: 'nav__list-item' }, el('a', { href: 'javascript:;', className: 'nav__item', textContent: 'Na MarsOJ 设置', onclick: e => { e.preventDefault(); settings(); } })));
         document.querySelectorAll('.au-state:not([data-na])').forEach(el => { el.dataset.na = '1'; if (/未提交|未开始/.test(el.textContent)) return; markStatus(el); });
