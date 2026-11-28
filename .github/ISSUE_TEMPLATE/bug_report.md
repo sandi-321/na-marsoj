@@ -1,7 +1,7 @@
 ---
 name: Bug 报告
 about: 提交脚本运行中的问题
-title: '[Bug] '
+title: '[Bug] 请补全标题'
 labels: bug
 assignees: ''
 ---
