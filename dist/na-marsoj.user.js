@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Na MarsOJ
 // @namespace    http://tampermonkey.net/
-// @version      2.9.57
+// @version      2.9.58
 // @author       sandi_123
 // @match        *://marsoj.cn/*
 // @description  这是一个非常强大的MarsOJ优化脚本。
@@ -47,7 +47,7 @@
     }
 
     /* ========== 版本与更新 ========== */
-    const CUR_VER = '2.9.57';
+    const CUR_VER = '2.9.58';
     const UPDATE_SOURCES = [
         'https://fastly.jsdelivr.net/gh/sandi-321/na-marsoj@main/dist/na-marsoj.user.js',
         'https://cdn.jsdelivr.net/gh/sandi-321/na-marsoj@main/dist/na-marsoj.user.js',
@@ -149,7 +149,11 @@
             const btnDo = el('button', {
                 className: 'na-wb na-wp',
                 textContent: `更新到 v${info.version}`,
-                onclick: () => GM_openInTab(info.url, { active: true })
+                onclick: () => {
+                    GM_openInTab(info.url, { active: true });
+                    setUpdateInfo(null);           // 清除更新缓存
+                    renderUpdateSection(container); // 重新渲染，按钮消失
+                }
             });
             wrapper.append(btnDo);
         }
