@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Na MarsOJ
 // @namespace    http://tampermonkey.net/
-// @version      2.9.55
+// @version      2.9.56
 // @author       sandi_123
 // @match        *://marsoj.cn/*
 // @description  这是一个非常强大的MarsOJ优化脚本。
@@ -47,7 +47,7 @@
     }
 
     /* ========== 版本与更新 ========== */
-    const CUR_VER = '2.9.55';
+    const CUR_VER = '2.9.56';
     const UPDATE_SOURCES = [
         'https://fastly.jsdelivr.net/gh/sandi-321/na-marsoj@main/dist/na-marsoj.user.js',
         'https://cdn.jsdelivr.net/gh/sandi-321/na-marsoj@main/dist/na-marsoj.user.js',
@@ -110,12 +110,11 @@
     // 静默自动检查（页面刷新时调用，不弹 toast）
     function autoCheckUpdate() {
         const last = parseInt(localStorage.getItem(K_AUTO_CHECK) || '0');
-        if (Date.now() - last < 30 * 60 * 1000) return; // 30分钟内不重复
+        if (Date.now() - last < 30 * 60 * 1000) return;
         localStorage.setItem(K_AUTO_CHECK, Date.now());
         fetchRemoteVersion().then(r => {
             if (r && cmpVer(r.version, CUR_VER) > 0) setUpdateInfo({ version: r.version, url: r.url });
             else setUpdateInfo(null);
-            // 如果设置面板正开着，刷新更新区域
             const container = document.querySelector('.na-update-container');
             if (container) renderUpdateSection(container);
         });
@@ -157,7 +156,7 @@
         container.append(wrapper);
     }
 
-    /* ========== 其余业务逻辑（未改动） ========== */
+    /* ========== 其余业务逻辑 ========== */
     const KT = 'na_t', KH = 'na_h', KR = 'na_rc', KREDIRECT = 'na_redirect_enable';
     const KP_EN = 'na_partial_enable', KF_EN = 'na_fail_enable', KLHE = 'na_latest_hw_enable', KHC = 'na_my_class_cid';
     const U1 = 'https://marsoj.cn/homework', U2 = U1 + '?tab=classes';
@@ -174,6 +173,7 @@
     const getFailEnable = () => localStorage.getItem(KF_EN) !== 'false';
     const getLatestHwEnable = () => localStorage.getItem(KLHE) !== 'false';
     const el = (t, p = {}, ...c) => { const n = Object.assign(document.createElement(t), p); n.append(...c); return n; };
+
     function formatDeadline(dateStr) {
         if (!dateStr) return '';
         const d = new Date(dateStr.replace(/-/g, '/'));
@@ -181,6 +181,7 @@
         const p = n => String(n).padStart(2, '0');
         return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())} 截止`;
     }
+
     function getHomeworkDeadlineFromDetail(id) {
         return new Promise(resolve => {
             GM_xmlhttpRequest({
@@ -231,6 +232,7 @@
             });
         });
     }
+
     let _myClassCache = null;
     function getMyClassCid() {
         if (_myClassCache) return Promise.resolve(_myClassCache);
@@ -255,6 +257,7 @@
             });
         });
     }
+
     let _latestHomeworkCache = null;
     function getLatestHomeworkInfo() {
         if (_latestHomeworkCache) return Promise.resolve(_latestHomeworkCache);
@@ -293,6 +296,7 @@
             });
         });
     }
+
     let _firstClassCache = null;
     function getFirstClassId() {
         if (_firstClassCache) return Promise.resolve(_firstClassCache);
@@ -316,6 +320,7 @@
             } catch { resolve(null); }
         });
     }
+
     GM_addStyle(`
         #na-tc{position:fixed;right:24px;bottom:24px;z-index:1000001;display:flex;flex-direction:column;gap:10px;pointer-events:none}
         .na-ts{pointer-events:auto;min-width:220px;background:#121214f5;color:#f5f5f5;border:1px solid #4a4a4a;border-radius:2px;padding:12px 16px;box-shadow:0 4px 12px #0004;display:flex;align-items:center;justify-content:space-between;gap:16px;font-size:14px;opacity:0;transform:translate3d(40px,0,0);transition:.25s}
@@ -346,6 +351,7 @@
         .na-cats::-webkit-scrollbar-thumb,.na-content::-webkit-scrollbar-thumb,.na-dm::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
         .na-cats::-webkit-scrollbar-thumb:hover,.na-content::-webkit-scrollbar-thumb:hover,.na-dm::-webkit-scrollbar-thumb:hover{background:#aaa}
     `);
+
     function applyColorStyle() {
         let style = document.getElementById('na-color-style');
         let css = '';
@@ -356,6 +362,7 @@
             style.textContent = css;
         } else { if (style) style.remove(); }
     }
+
     function toast(msg, ms = getT()) {
         const tc = document.getElementById('na-tc') || document.body.appendChild(el('div', { id: 'na-tc' }));
         const b = el('button', { className: 'na-cl', textContent: '×' });
@@ -366,6 +373,7 @@
         b.onclick = end; t.onmouseenter = () => clearTimeout(tm); t.onmouseleave = run; run();
         return end;
     }
+
     let latestHwApplied = false;
     function applyLatestHomework() {
         if (latestHwApplied) return;
@@ -417,6 +425,30 @@
             latestHwApplied = true;
         }).catch(() => {});
     }
+
+    /* ===== 替换公告为最新消息 ===== */
+    function replaceBulletin() {
+        const bulletinPanel = document.querySelector('section.hp-panel[aria-labelledby="hp-bulletin-title"]');
+        if (!bulletinPanel) return;
+        if (bulletinPanel.querySelector('[data-na-bulletin="1"]')) return; // 已替换
+        const emptyDiv = bulletinPanel.querySelector('.hp-empty.hp-bulletin-empty');
+        if (!emptyDiv) return;
+        const newDiv = document.createElement('div');
+        newDiv.className = 'hp-bulletin-content';
+        newDiv.setAttribute('data-na-bulletin', '1');
+        newDiv.style.cssText = 'padding:12px 16px;font-size:14px;color:#333;line-height:1.6';
+        newDiv.innerHTML = `
+            <ul style="margin:0;padding-left:20px;">
+                <li><strong>Na MarsOJ v2.9.56 已发布</strong>：新增替换首页公告为最新消息，优化自动更新检测。</li>
+                <li>在脚本设置 → 更新 中可手动检查更新，或等待自动检测（每30分钟一次）。</li>
+                <li>反馈 / 源码：<a href="https://github.com/sandi-321/na-marsoj" target="_blank" style="color:#1677ff;text-decoration:none">GitHub</a></li>
+            </ul>
+        `;
+        emptyDiv.replaceWith(newDiv);
+        const title = bulletinPanel.querySelector('#hp-bulletin-title');
+        if (title) title.textContent = '最新消息';
+    }
+
     function settings() {
         if (document.getElementById('na-md')) return;
         let sel = getH();
@@ -484,7 +516,7 @@
             updateContainer
         );
         const secUpdate = el('div', { className: 'na-cat-section' }); secUpdate.append(rowUpdate);
-        renderUpdateSection(updateContainer); // 初始渲染
+        renderUpdateSection(updateContainer);
 
         const sectionMap = { basic: secBasic, status: secStatus, data: secData, update: secUpdate };
         const contentArea = el('div', { className: 'na-content' }, secBasic, secStatus, secData, secUpdate);
@@ -509,6 +541,7 @@
         document.body.append(md);
         getFirstClassId().then(cid => { const display = cid ? `我的首个班级 (/homework?tab=class&cid=XXX)` : '我的首个班级 (无班级)'; const opt = OPTS.find(o => o.v === 'na_first_class'); if (opt) opt.t = display; const item = dm.querySelector('.na-di[data-val="na_first_class"]'); if (item) item.textContent = display; if (sel === 'na_first_class') tt.textContent = display; }).catch(() => {});
     }
+
     const q = []; let busy = false;
     const markStatus = (el) => { if (el.classList.contains('au-accepted')) return; const txt = el.textContent.trim(); if (/部分/.test(txt) || (/[1-9]/.test(txt) && !/未通过\s*0/.test(txt))) el.dataset.partial = '1'; else el.dataset.fail = '1'; };
     const toA = (sp, id) => { const a = el('a', { className: sp.className, title: sp.title, href: '/record/' + id, textContent: sp.textContent }); a.dataset.na = '1'; if (sp.dataset.partial) a.dataset.partial = '1'; if (sp.dataset.fail) a.dataset.fail = '1'; sp.replaceWith(a); };
@@ -528,6 +561,7 @@
         } catch { }
         setTimeout(() => { busy = false; runQ(); }, 150);
     }
+
     function init() {
         if (!document.querySelector('#menu-nav-user a[href^="/user/"]')) return;
         const hw = document.querySelector('a.nav__item[href*="/homework"]');
@@ -540,6 +574,7 @@
             }
         }
         applyLatestHomework();
+        replaceBulletin(); // 替换公告
         const dm = document.querySelector('li.nav__list-item[data-dropdown-target="#menu-nav-domain"]');
         if (dm && !document.getElementById('na-st')) dm.replaceWith(el('li', { id: 'na-st', className: 'nav__list-item' }, el('a', { href: 'javascript:;', className: 'nav__item', textContent: 'Na MarsOJ 设置', onclick: e => { e.preventDefault(); settings(); } })));
         document.querySelectorAll('.au-state:not([data-na])').forEach(el => { el.dataset.na = '1'; if (/未提交|未开始/.test(el.textContent)) return; markStatus(el); });
@@ -548,9 +583,10 @@
             if (uid) { const c = getRC(); document.querySelectorAll('span.au-state[data-na]').forEach(sp => { if (/未提交|未开始/.test(sp.textContent)) return; const lk = sp.closest('tr')?.querySelector('.au-problem-title a'); if (!lk) return; const u = new URL(lk.href, location.origin), pid = u.pathname.split('/').pop(), tid = u.searchParams.get('tid') || '', key = `${uid}_${tid}_${pid}`, ok = sp.classList.contains('au-accepted'), h = c[key]; if (h?.id && (h.ok || (!ok && Date.now() - h.ts < 6e5))) toA(sp, h.id); else q.push({ sp, pid, tid, uid, key, ok }); }); runQ(); }
         } else { document.querySelectorAll('a.au-state[data-na]').forEach(a => toSpan(a)); }
     }
+
     applyColorStyle();
     setTimeout(() => toast('Na MarsOJ加载成功'), 150); init();
-    autoCheckUpdate(); // 静默自动检查更新
+    autoCheckUpdate();
     let obsTimer;
     new MutationObserver(() => { clearTimeout(obsTimer); obsTimer = setTimeout(() => { latestHwApplied = false; init(); }, 200); }).observe(document.body, { childList: true, subtree: true });
 })();
